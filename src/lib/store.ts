@@ -7,9 +7,20 @@ export interface Resource {
   type: string; // 'Video', 'Artikel', 'Course', dll
 }
 
+export interface QuizItem {
+  question: string;
+  options: string[];
+  correctAnswerIndex: number;
+  explanation: string;
+}
+
 export interface Topic {
   title: string;
   description: string;
+  explanation?: string;
+  content?: string;
+  quiz?: QuizItem[];
+  quizCompleted?: boolean;
   resources: Resource[];
   estimatedHours: number;
   completed: boolean;
@@ -36,7 +47,10 @@ interface AppState {
   notes: string;
   setProfile: (profile: UserProfile) => void;
   setLearningPath: (path: DayPlan[]) => void;
+  appendLearningPath: (path: DayPlan[]) => void;
+  setTopicData: (dayIndex: number, topicIndex: number, content: string, quiz?: QuizItem[]) => void;
   markTopicCompleted: (dayIndex: number, topicIndex: number, completed: boolean) => void;
+  markQuizCompleted: (dayIndex: number, topicIndex: number) => void;
   checkIn: () => void;
   setNotes: (notes: string) => void;
   resetProgress: () => void;
@@ -56,6 +70,20 @@ export const useAppStore = create<AppState>()(
       
       setLearningPath: (path) => set({ learningPath: path }),
 
+      appendLearningPath: (newDays) => set((state) => ({
+        learningPath: state.learningPath ? [...state.learningPath, ...newDays] : newDays
+      })),
+
+      setTopicData: (dayIndex, topicIndex, content, quiz) => 
+        set((state) => {
+          if (!state.learningPath) return state;
+          const newPath = [...state.learningPath];
+          newPath[dayIndex].topics[topicIndex].content = content;
+          newPath[dayIndex].topics[topicIndex].quiz = quiz;
+          newPath[dayIndex].topics[topicIndex].quizCompleted = false; // Reset on new generation
+          return { learningPath: newPath };
+        }),
+
       setNotes: (notes) => set({ notes }),
       
       markTopicCompleted: (dayIndex, topicIndex, completed) => 
@@ -69,6 +97,14 @@ export const useAppStore = create<AppState>()(
           const allTopicsCompleted = newPath[dayIndex].topics.every(t => t.completed);
           newPath[dayIndex].isCompleted = allTopicsCompleted;
           
+          return { learningPath: newPath };
+        }),
+
+      markQuizCompleted: (dayIndex, topicIndex) => 
+        set((state) => {
+          if (!state.learningPath) return state;
+          const newPath = [...state.learningPath];
+          newPath[dayIndex].topics[topicIndex].quizCompleted = true;
           return { learningPath: newPath };
         }),
         

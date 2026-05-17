@@ -33,6 +33,16 @@ export default function Onboarding() {
   const [level, setLevel] = useState("");
   const [hours, setHours] = useState(2);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  const loadingMessages = [
+    "Menganalisis Profil Belajarmu... 🤔",
+    "Mencari Referensi Terbaik... 📚",
+    "Menyusun Struktur 30 Hari... 🏗️",
+    "Meracik Topik Harian... ☕",
+    "Hampir Selesai! Bentar Lagi... 🚀"
+  ];
 
   const handleNext = async () => {
     if (step < 3) {
@@ -44,6 +54,17 @@ export default function Onboarding() {
 
   const generatePath = async () => {
     setIsGenerating(true);
+    setLoadingProgress(0);
+    setLoadingMessageIndex(0);
+    
+    // Start progress simulation
+    const progressInterval = setInterval(() => {
+      setLoadingProgress((prev) => (prev >= 95 ? 95 : prev + 1));
+    }, 200); // 1% every 200ms -> roughly 20s to hit 95%
+    
+    const messageInterval = setInterval(() => {
+      setLoadingMessageIndex((prev) => Math.min(prev + 1, loadingMessages.length - 1));
+    }, 4000); // Change message every 4 seconds
     
     const finalGoal = goal === "custom" ? customGoal : goal;
     
@@ -72,10 +93,18 @@ export default function Onboarding() {
       const pathData = Array.isArray(data) ? data : data.learningPath;
       
       setLearningPath(pathData);
+      clearInterval(progressInterval);
+      clearInterval(messageInterval);
+      setLoadingProgress(100);
+      
       toast.success('Learning path berhasil dibuat!');
-      router.push('/dashboard');
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 500); // brief delay to show 100%
     } catch (error) {
       console.error(error);
+      clearInterval(progressInterval);
+      clearInterval(messageInterval);
       toast.error('Maaf, ada masalah saat generate path. Coba lagi ya!');
       setIsGenerating(false);
     }
@@ -94,13 +123,31 @@ export default function Onboarding() {
           </div>
         </motion.div>
         
-        <h2 className="text-4xl md:text-6xl font-black uppercase text-center mb-6 leading-tight max-w-4xl px-4 z-10">
+        <h2 className="text-4xl md:text-6xl font-black uppercase text-center mb-12 leading-tight max-w-4xl px-4 z-10">
           AI SEDANG <br /> <span className="bg-[#38E54D] px-4 border-4 border-black shadow-[6px_6px_0px_#000] inline-block my-2 -rotate-2">MEMASAK</span> <br /> KURIKULUM 90 HARIMU!
         </h2>
         
-        <p className="font-bold text-xl px-8 py-4 bg-white border-4 border-black shadow-[8px_8px_0px_#000] rotate-1 z-10">
-          Pemanasan dulu gih, ini butuh 10-15 detik... 🔥
-        </p>
+        {/* Dynamic Progress Loader */}
+        <div className="w-full max-w-2xl px-6 z-10">
+          <div className="flex justify-between items-end mb-2 font-black uppercase text-xl">
+            <span>{loadingMessages[loadingMessageIndex]}</span>
+            <span className="text-3xl">{loadingProgress}%</span>
+          </div>
+          <div className="h-10 w-full bg-white border-4 border-black shadow-[8px_8px_0px_#000] relative overflow-hidden">
+            <motion.div 
+              className="h-full bg-[#FF90E8] border-r-4 border-black flex items-center justify-end px-2"
+              initial={{ width: 0 }}
+              animate={{ width: `${loadingProgress}%` }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              {/* Optional pattern or shine effect inside bar */}
+              <div className="w-full h-full opacity-20" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, #000 10px, #000 20px)' }}></div>
+            </motion.div>
+          </div>
+          <p className="font-bold text-center mt-6 bg-white border-4 border-black px-4 py-2 inline-block mx-auto shadow-[4px_4px_0px_#000] -rotate-1">
+            Biasanya butuh 15-20 detik tergantung tingkat kesulitan.
+          </p>
+        </div>
 
         {/* Decor */}
         <div className="absolute top-20 left-20 text-6xl animate-pulse">🛠️</div>

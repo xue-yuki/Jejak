@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useAppStore } from "@/lib/store";
+import toast from "react-hot-toast";
 import { 
   Home, Edit3, Settings, Search, 
-  ChevronRight, LayoutDashboard, Compass, Star
+  ChevronRight, LayoutDashboard, Compass, Star, Zap, Loader2
 } from "lucide-react";
 
 type NotionSidebarProps = {
@@ -14,6 +16,8 @@ type NotionSidebarProps = {
 export function NotionSidebar({ activePage, setActivePage }: NotionSidebarProps) {
   const profile = useAppStore((state) => state.profile);
   const learningPath = useAppStore((state) => state.learningPath);
+  const appendLearningPath = useAppStore((state) => state.appendLearningPath);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   if (!profile || !learningPath) return null;
 
@@ -116,6 +120,50 @@ export function NotionSidebar({ activePage, setActivePage }: NotionSidebarProps)
                 </div>
               );
             })}
+
+            {learningPath.length < 90 && (
+              <div className="mt-8 pt-4 border-t-2 border-black/10">
+                <button
+                  onClick={async () => {
+                    if (isGenerating) return;
+                    setIsGenerating(true);
+                    try {
+                      const response = await fetch('/api/generate-path', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          goal: profile.goal,
+                          level: profile.level,
+                          hoursPerDay: profile.hoursPerDay,
+                          startDay: learningPath.length + 1
+                        }),
+                      });
+
+                      if (!response.ok) throw new Error("Gagal generate fase berikutnya");
+                      
+                      const jsonResult = await response.json();
+                      const pathArray = Array.isArray(jsonResult) ? jsonResult : jsonResult.learningPath;
+                      
+                      appendLearningPath(pathArray);
+                      toast.success(`Fase berikutnya (Hari ${learningPath.length + 1}) berhasil ditambahkan!`);
+                    } catch (error) {
+                      console.error(error);
+                      toast.error("Gagal membuat fase berikutnya. Coba lagi.");
+                    } finally {
+                      setIsGenerating(false);
+                    }
+                  }}
+                  disabled={isGenerating}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-4 bg-[#FFC900] border-2 border-black rounded-lg transition-all font-black text-black uppercase hover:-translate-y-1 hover:shadow-[4px_4px_0px_#000] disabled:opacity-50 disabled:transform-none disabled:shadow-none"
+                >
+                  {isGenerating ? (
+                    <><Loader2 className="w-5 h-5 animate-spin" /> MENGANALISIS...</>
+                  ) : (
+                    <><Zap className="w-5 h-5 fill-current" /> GENERATE FASE {Math.floor(learningPath.length / 30) + 1}</>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
