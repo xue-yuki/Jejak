@@ -27,10 +27,26 @@ export default function Dashboard() {
 
   const notesRef = useRef<HTMLTextAreaElement>(null);
 
+  let currentActiveDayIndex = 0;
+  if (learningPath) {
+    learningPath.forEach((day, index) => {
+      if (day.isCompleted) {
+        currentActiveDayIndex = Math.min(index + 1, learningPath.length - 1);
+      }
+    });
+  }
+  const activeLevel = Math.floor(currentActiveDayIndex / 7) + 1;
+
   useEffect(() => {
     setIsMounted(true);
     document.documentElement.style.colorScheme = 'light';
   }, []);
+
+  useEffect(() => {
+    if (isMounted) {
+      setViewLevel(activeLevel);
+    }
+  }, [activeLevel, isMounted]);
 
   const triggerConfetti = () => {
     const duration = 2 * 1000;
@@ -99,25 +115,13 @@ export default function Dashboard() {
 
   let totalTopics = 0;
   let completedTopics = 0;
-  let currentActiveDayIndex = 0;
   
-  learningPath.forEach((day, index) => {
+  learningPath.forEach((day) => {
     day.topics.forEach(topic => {
       totalTopics++;
       if (topic.completed) completedTopics++;
     });
-    if (day.isCompleted) {
-      currentActiveDayIndex = Math.min(index + 1, learningPath.length - 1);
-    }
   });
-  
-  const activeLevel = Math.floor(currentActiveDayIndex / 7) + 1;
-  
-  useEffect(() => {
-    if (isMounted) {
-      setViewLevel(activeLevel);
-    }
-  }, [activeLevel, isMounted]);
 
   const progressPercentage = totalTopics === 0 ? 0 : Math.round((completedTopics / totalTopics) * 100);
   const colors = ['#FFC900', '#FF90E8', '#38E54D', '#00E5FF', '#FF5722'];
