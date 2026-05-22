@@ -22,6 +22,7 @@ export interface Topic {
   quiz?: QuizItem[];
   quizCompleted?: boolean;
   resources: Resource[];
+  youtubeVideos?: { title: string; url: string }[];
   estimatedHours: number;
   completed: boolean;
 }
@@ -33,9 +34,18 @@ export interface DayPlan {
 }
 
 export interface UserProfile {
+  name?: string;
   goal: string;
   level: string;
   hoursPerDay: number;
+}
+
+export interface StickyNote {
+  id: string;
+  content: string;
+  color: string;
+  x: number;
+  y: number;
 }
 
 interface AppState {
@@ -45,14 +55,20 @@ interface AppState {
   streak: number;
   lastCheckInDate: string | null;
   notes: string;
+  stickyNotes: StickyNote[];
+  exp: number;
   setProfile: (profile: UserProfile) => void;
   setLearningPath: (path: DayPlan[]) => void;
   appendLearningPath: (path: DayPlan[]) => void;
-  setTopicData: (dayIndex: number, topicIndex: number, content: string, quiz?: QuizItem[]) => void;
+  setTopicData: (dayIndex: number, topicIndex: number, content: string, quiz?: QuizItem[], youtubeVideos?: { title: string; url: string }[]) => void;
   markTopicCompleted: (dayIndex: number, topicIndex: number, completed: boolean) => void;
   markQuizCompleted: (dayIndex: number, topicIndex: number) => void;
   checkIn: () => void;
   setNotes: (notes: string) => void;
+  addStickyNote: (note: StickyNote) => void;
+  updateStickyNote: (id: string, updates: Partial<StickyNote>) => void;
+  deleteStickyNote: (id: string) => void;
+  addExp: (amount: number) => void;
   resetProgress: () => void;
 }
 
@@ -65,6 +81,8 @@ export const useAppStore = create<AppState>()(
       streak: 0,
       lastCheckInDate: null,
       notes: "",
+      stickyNotes: [],
+      exp: 0,
       
       setProfile: (profile) => set({ profile }),
       
@@ -74,30 +92,53 @@ export const useAppStore = create<AppState>()(
         learningPath: state.learningPath ? [...state.learningPath, ...newDays] : newDays
       })),
 
-      setTopicData: (dayIndex, topicIndex, content, quiz) => 
+      setTopicData: (dayIndex, topicIndex, content, quiz, youtubeVideos) => 
         set((state) => {
           if (!state.learningPath) return state;
           const newPath = [...state.learningPath];
           newPath[dayIndex].topics[topicIndex].content = content;
           newPath[dayIndex].topics[topicIndex].quiz = quiz;
+          newPath[dayIndex].topics[topicIndex].youtubeVideos = youtubeVideos;
           newPath[dayIndex].topics[topicIndex].quizCompleted = false; // Reset on new generation
           return { learningPath: newPath };
         }),
 
       setNotes: (notes) => set({ notes }),
       
+      addStickyNote: (note) => set((state) => ({ 
+        stickyNotes: [...state.stickyNotes, note] 
+      })),
+      
+      updateStickyNote: (id, updates) => set((state) => ({
+        stickyNotes: state.stickyNotes.map((note) => 
+          note.id === id ? { ...note, ...updates } : note
+        )
+      })),
+      
+      deleteStickyNote: (id) => set((state) => ({
+        stickyNotes: state.stickyNotes.filter((note) => note.id !== id)
+      })),
+      
       markTopicCompleted: (dayIndex, topicIndex, completed) => 
         set((state) => {
           if (!state.learningPath) return state;
           
           const newPath = [...state.learningPath];
-          newPath[dayIndex].topics[topicIndex].completed = completed;
+          const topic = newPath[dayIndex].topics[topicIndex];
+          
+          // Add EXP if newly completed
+          let addedExp = 0;
+          if (!topic.completed && completed) {
+            addedExp = 50;
+          }
+          
+          topic.completed = completed;
           
           // Check if all topics in the day are completed
           const allTopicsCompleted = newPath[dayIndex].topics.every(t => t.completed);
           newPath[dayIndex].isCompleted = allTopicsCompleted;
           
-          return { learningPath: newPath };
+          return { learningPath: newPath, exp: state.exp + addedExp };
         }),
 
       markQuizCompleted: (dayIndex, topicIndex) => 
@@ -130,9 +171,12 @@ export const useAppStore = create<AppState>()(
           
           return { 
             streak: newStreak, 
-            lastCheckInDate: today 
+            lastCheckInDate: today,
+            exp: state.exp + 50
           };
         }),
+        
+      addExp: (amount) => set((state) => ({ exp: state.exp + amount })),
         
       resetProgress: () => set({
         profile: null,
@@ -141,6 +185,8 @@ export const useAppStore = create<AppState>()(
         streak: 0,
         lastCheckInDate: null,
         notes: "",
+        stickyNotes: [],
+        exp: 0,
       }),
     }),
     {

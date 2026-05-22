@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export async function POST(req: Request) {
   try {
+    // SECURITY CHECK: Verify Supabase Session
+    const supabase = await createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized. Please log in first." }, { status: 401 });
+    }
+
     const body = await req.json();
     const { goal, level, hoursPerDay, startDay = 1 } = body;
 

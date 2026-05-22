@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SupabaseProvider } from "@/components/supabase-provider";
 import "./globals.css";
 
 const inter = Inter({
@@ -37,10 +38,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="flex-1 flex flex-col">
-            {children}
-          </main>
-          <Toaster position="bottom-right" />
+          <SupabaseProvider>
+            <main className="flex-1 flex flex-col">
+              {children}
+            </main>
+            <Toaster position="bottom-right" />
+          </SupabaseProvider>
         </ThemeProvider>
       </body>
     </html>
